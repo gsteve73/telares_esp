@@ -1,620 +1,432 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Monitor RPM</title>
+<title>Monitor de Producción — RPM</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;600;700;900&family=Share+Tech+Mono&display=swap');
+:root { --transition-theme: background 0.35s ease, color 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease; }
 
-:root {
-  --bg:      #07090c;
-  --surface: #0e1318;
-  --border:  #182030;
-  --accent:  #e8ff00;
-  --cyan:    #00d4ff;
-  --red:     #ff2b4a;
-  --green:   #00f57a;
-  --orange:  #ff7300;
-  --text:    #c4d4e0;
-  --muted:   #3a5068;
+[data-theme="dark"] {
+  --bg:#111318;--bg-subtle:#16191f;--surface:#1c2028;--surface-2:#232830;
+  --border:#2a3040;--border-light:#333d50;--text:#e8edf5;--text-2:#8b95a8;--text-3:#4a5568;
+  --primary:#4f8ef7;--primary-soft:rgba(79,142,247,0.12);
+  --green:#34d399;--green-soft:rgba(52,211,153,0.1);
+  --red:#f87171;--red-soft:rgba(248,113,113,0.1);
+  --orange:#fb923c;--orange-soft:rgba(251,146,60,0.1);
+  --shadow-sm:0 1px 3px rgba(0,0,0,0.4);--shadow-md:0 4px 16px rgba(0,0,0,0.35);
 }
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
-
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: 'Barlow Condensed', sans-serif;
-  min-height: 100vh;
-  overflow-x: hidden;
+[data-theme="light"] {
+  --bg:#f4f6fa;--bg-subtle:#eef1f7;--surface:#ffffff;--surface-2:#f8f9fc;
+  --border:#e2e8f0;--border-light:#d1d9e6;--text:#1a202c;--text-2:#64748b;--text-3:#a0aec0;
+  --primary:#2563eb;--primary-soft:rgba(37,99,235,0.08);
+  --green:#059669;--green-soft:rgba(5,150,105,0.08);
+  --red:#dc2626;--red-soft:rgba(220,38,38,0.08);
+  --orange:#ea580c;--orange-soft:rgba(234,88,12,0.08);
+  --shadow-sm:0 1px 3px rgba(0,0,0,0.08);--shadow-md:0 4px 16px rgba(0,0,0,0.08);
 }
 
-body::before {
-  content: '';
-  position: fixed; inset: 0;
-  background-image:
-    linear-gradient(rgba(0,212,255,0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,212,255,0.02) 1px, transparent 1px);
-  background-size: 40px 40px;
-  pointer-events: none;
-}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;line-height:1.6;min-height:100vh;transition:var(--transition-theme);-webkit-font-smoothing:antialiased;}
 
-#app {
-  position: relative;
-  z-index: 1;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 20px 40px;
-}
+.page{max-width:1280px;margin:0 auto;padding:0 28px 56px;}
 
-/* ── HEADER ── */
-header {
-  padding: 24px 0 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 28px;
-  flex-wrap: wrap;
-  gap: 12px;
-}
+/* HEADER */
+.header{display:flex;align-items:center;justify-content:space-between;padding:28px 0 24px;border-bottom:1px solid var(--border);margin-bottom:32px;gap:16px;flex-wrap:wrap;}
+.header-title{font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:600;color:var(--text);letter-spacing:-0.3px;}
+.header-subtitle{font-size:0.82rem;color:var(--text-2);display:flex;align-items:center;gap:10px;margin-top:2px;flex-wrap:wrap;}
+.separator{color:var(--border-light);}
+.header-right{display:flex;align-items:center;gap:12px;}
+.status-pill{display:flex;align-items:center;gap:7px;padding:6px 14px;border-radius:100px;background:var(--green-soft);border:1px solid rgba(52,211,153,0.2);font-size:0.78rem;font-weight:500;color:var(--green);transition:var(--transition-theme);}
+.status-pill.offline{background:var(--red-soft);border-color:rgba(248,113,113,0.2);color:var(--red);}
+.pulse-dot{width:7px;height:7px;border-radius:50%;background:currentColor;animation:pulse 2s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.4;transform:scale(0.75);}}
+.theme-btn{width:38px;height:38px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text-2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem;transition:all 0.2s;box-shadow:var(--shadow-sm);}
+.theme-btn:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-soft);}
+.update-time{font-size:0.75rem;color:var(--text-3);font-family:'DM Mono',monospace;}
 
-.brand-name {
-  font-size: 1.5rem;
-  font-weight: 900;
-  letter-spacing: 5px;
-  text-transform: uppercase;
-  color: var(--accent);
-  text-shadow: 0 0 30px rgba(232,255,0,0.3);
-}
+/* ALERT BANNER */
+#alert-banner{display:none;align-items:center;gap:12px;background:var(--red-soft);border:1px solid rgba(248,113,113,0.25);border-left:3px solid var(--red);border-radius:10px;padding:14px 18px;margin-bottom:24px;font-size:0.875rem;color:var(--red);animation:slideDown 0.3s ease;}
+@keyframes slideDown{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
 
-.brand-sub {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 0.72rem;
-  color: var(--muted);
-  letter-spacing: 2px;
-  margin-top: 2px;
-}
+/* HERO */
+.hero{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:36px;margin-bottom:20px;display:grid;grid-template-columns:1fr auto 1fr;gap:40px;align-items:center;box-shadow:var(--shadow-md);transition:var(--transition-theme);}
+.hero-label{font-size:0.72rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-3);margin-bottom:8px;}
+.rpm-number{font-family:'DM Mono',monospace;font-size:clamp(4rem,9vw,6.5rem);font-weight:500;line-height:1;color:var(--primary);transition:color 0.4s;letter-spacing:-3px;}
+.rpm-number.warning{color:var(--red);}
+.rpm-unit-row{display:flex;align-items:center;gap:12px;margin-top:10px;}
+.rpm-unit{font-size:1.1rem;font-weight:500;color:var(--text-2);letter-spacing:1px;}
+.rpm-trend{font-size:0.78rem;padding:3px 10px;border-radius:100px;font-weight:500;}
+.rpm-trend.up{background:var(--red-soft);color:var(--red);}
+.rpm-trend.down{background:var(--green-soft);color:var(--green);}
+.rpm-trend.flat{background:var(--primary-soft);color:var(--primary);}
+.gauge-section{display:flex;flex-direction:column;align-items:center;gap:8px;}
+canvas#gauge{display:block;}
+.gauge-pct{text-align:center;font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--text-3);}
+.hero-meta{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.meta-item{background:var(--bg-subtle);border:1px solid var(--border);border-radius:10px;padding:14px 16px;transition:var(--transition-theme);}
+.meta-label{font-size:0.7rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3);margin-bottom:4px;}
+.meta-value{font-size:0.92rem;font-weight:500;color:var(--text);font-family:'DM Mono',monospace;}
 
-.header-right { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;box-shadow:var(--shadow-sm);transition:var(--transition-theme);position:relative;overflow:hidden;}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:14px 14px 0 0;}
+.stat-card.min::before{background:linear-gradient(90deg,#38bdf8,#7dd3fc);}
+.stat-card.max::before{background:linear-gradient(90deg,#fb923c,#fbbf24);}
+.stat-card.avg::before{background:linear-gradient(90deg,#34d399,#6ee7b7);}
+.stat-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;margin-bottom:14px;}
+.stat-card.min .stat-icon{background:rgba(56,189,248,0.12);}
+.stat-card.max .stat-icon{background:var(--orange-soft);}
+.stat-card.avg .stat-icon{background:var(--green-soft);}
+.stat-label{font-size:0.72rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px;}
+.stat-value{font-family:'DM Mono',monospace;font-size:2rem;font-weight:500;line-height:1;}
+.stat-card.min .stat-value{color:#38bdf8;}
+.stat-card.max .stat-value{color:var(--orange);}
+.stat-card.avg .stat-value{color:var(--green);}
+.stat-unit{font-size:0.75rem;color:var(--text-3);margin-top:4px;}
 
-.live-badge {
-  display: flex; align-items: center; gap: 7px;
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 0.72rem; letter-spacing: 1px;
-  color: var(--green);
-  border: 1px solid rgba(0,245,122,0.3);
-  padding: 5px 12px; border-radius: 2px;
-}
+/* PANEL */
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:26px;margin-bottom:20px;box-shadow:var(--shadow-sm);transition:var(--transition-theme);}
+.panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:12px;}
+.panel-title{font-size:0.95rem;font-weight:600;color:var(--text);}
+.panel-subtitle{font-size:0.78rem;color:var(--text-2);margin-top:2px;}
+.range-group{display:flex;background:var(--bg-subtle);border:1px solid var(--border);border-radius:8px;padding:3px;gap:2px;}
+.range-btn{font-family:'DM Sans',sans-serif;font-size:0.78rem;font-weight:500;padding:5px 14px;border:none;background:transparent;color:var(--text-2);border-radius:6px;cursor:pointer;transition:all 0.18s;}
+.range-btn:hover{color:var(--text);background:var(--surface-2);}
+.range-btn.active{background:var(--surface);color:var(--primary);box-shadow:var(--shadow-sm);}
+.chart-wrap{position:relative;height:260px;}
 
-.live-dot {
-  width: 7px; height: 7px; border-radius: 50%;
-  background: var(--green);
-  box-shadow: 0 0 8px var(--green);
-  animation: pulse 1.5s ease-in-out infinite;
-}
+/* ALERT CONFIG */
+.alert-config-grid{display:grid;grid-template-columns:1fr 1fr 2fr;gap:14px;align-items:end;}
+.field{display:flex;flex-direction:column;gap:6px;}
+.field label{font-size:0.72rem;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;color:var(--text-3);}
+.field input{background:var(--bg-subtle);border:1px solid var(--border);border-radius:9px;padding:9px 14px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.9rem;outline:none;transition:all 0.2s;width:100%;}
+.field input:focus{border-color:var(--primary);background:var(--primary-soft);box-shadow:0 0 0 3px rgba(79,142,247,0.1);}
+.alert-badge{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:9px;font-size:0.82rem;font-weight:600;border:1px solid;white-space:nowrap;transition:all 0.3s;}
+.alert-badge.ok{background:var(--green-soft);border-color:rgba(52,211,153,0.2);color:var(--green);}
+.alert-badge.warn{background:var(--red-soft);border-color:rgba(248,113,113,0.2);color:var(--red);}
 
-@keyframes pulse {
-  0%,100% { opacity:1; transform:scale(1); }
-  50%      { opacity:0.3; transform:scale(0.7); }
-}
+/* TABLE */
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;}
+thead th{font-size:0.72rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3);padding:0 16px 12px;text-align:left;border-bottom:1px solid var(--border);}
+tbody td{padding:13px 16px;font-size:0.875rem;color:var(--text-2);border-bottom:1px solid var(--border);transition:background 0.15s;}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr:hover td{background:var(--bg-subtle);}
+.td-rpm{font-family:'DM Mono',monospace;font-weight:500;font-size:0.95rem;color:var(--primary);}
+.td-rpm.warn{color:var(--red);}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:100px;font-size:0.73rem;font-weight:600;}
+.badge.ok{background:var(--green-soft);color:var(--green);}
+.badge.warn{background:var(--red-soft);color:var(--red);}
 
-.last-update {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 0.68rem; color: var(--muted);
-}
+#error-box{display:none;background:var(--red-soft);border:1px solid rgba(248,113,113,0.2);border-radius:10px;padding:16px 20px;margin-bottom:20px;font-size:0.875rem;color:var(--red);}
 
-/* ── ALERT BANNER ── */
-#alert-banner {
-  display: none;
-  background: rgba(255,43,74,0.08);
-  border: 1px solid rgba(255,43,74,0.35);
-  border-left: 4px solid var(--red);
-  border-radius: 4px;
-  padding: 12px 18px;
-  margin-bottom: 20px;
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 0.82rem; color: var(--red);
-  animation: flash 0.8s ease-in-out 3;
-}
-@keyframes flash { 50% { opacity: 0.4; } }
+.footer{text-align:center;padding:28px 0 8px;font-size:0.75rem;color:var(--text-3);border-top:1px solid var(--border);}
 
-/* ── RPM HERO ── */
-.rpm-hero {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 36px 28px;
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  position: relative;
-  overflow: hidden;
-  flex-wrap: wrap;
-}
-
-.rpm-hero::before {
-  content: '';
-  position: absolute; top: 0; left: 0; right: 0; height: 3px;
-  background: linear-gradient(90deg, var(--accent), var(--cyan));
-}
-
-.rpm-label {
-  font-size: 0.65rem; letter-spacing: 4px;
-  text-transform: uppercase; color: var(--muted); margin-bottom: 4px;
-}
-
-.rpm-value {
-  font-size: clamp(4rem, 10vw, 7rem);
-  font-weight: 900; line-height: 1;
-  color: var(--accent);
-  text-shadow: 0 0 40px rgba(232,255,0,0.25);
-  transition: color 0.4s; letter-spacing: -2px;
-}
-
-.rpm-value.warning { color: var(--red); text-shadow: 0 0 40px rgba(255,43,74,0.4); }
-.rpm-unit { font-size: 1.4rem; font-weight: 300; color: var(--muted); letter-spacing: 3px; margin-top: 4px; }
-
-.gauge-wrap { position: relative; width: 180px; height: 100px; flex-shrink: 0; }
-.gauge-label {
-  position: absolute; bottom: 0; left: 50%;
-  transform: translateX(-50%);
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 0.62rem; color: var(--muted); white-space: nowrap;
-}
-
-.machine-info { display: flex; flex-direction: column; gap: 12px; }
-.info-row { display: flex; flex-direction: column; }
-.info-key { font-size: 0.6rem; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
-.info-val { font-family: 'Share Tech Mono', monospace; font-size: 0.9rem; color: var(--text); }
-
-/* ── STATS ── */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px; margin-bottom: 20px;
-}
-
-.stat-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  padding: 18px 20px;
-  position: relative; overflow: hidden;
-}
-
-.stat-card::after {
-  content: ''; position: absolute;
-  bottom: 0; left: 0; right: 0; height: 2px;
-}
-.stat-card.min::after { background: var(--cyan); }
-.stat-card.max::after { background: var(--orange); }
-.stat-card.avg::after { background: var(--green); }
-
-.stat-label { font-size: 0.6rem; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
-.stat-value { font-size: 2.2rem; font-weight: 700; line-height: 1; }
-.stat-card.min .stat-value { color: var(--cyan); }
-.stat-card.max .stat-value { color: var(--orange); }
-.stat-card.avg .stat-value { color: var(--green); }
-.stat-unit { font-family: 'Share Tech Mono', monospace; font-size: 0.7rem; color: var(--muted); margin-top: 3px; }
-
-/* ── CHART ── */
-.chart-panel {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 6px; padding: 22px; margin-bottom: 20px;
-}
-
-.panel-header {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 18px; flex-wrap: wrap; gap: 10px;
-}
-
-.panel-title { font-size: 0.65rem; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); }
-
-.range-btns { display: flex; gap: 4px; }
-.range-btn {
-  font-family: 'Share Tech Mono', monospace; font-size: 0.7rem;
-  padding: 4px 12px; border: 1px solid var(--border);
-  background: transparent; color: var(--muted);
-  border-radius: 2px; cursor: pointer; letter-spacing: 1px; transition: all 0.15s;
-}
-.range-btn.active, .range-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(232,255,0,0.05); }
-.chart-container { position: relative; height: 240px; }
-
-/* ── ALERT CONFIG ── */
-.alert-panel {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 6px; padding: 22px; margin-bottom: 20px;
-}
-
-.alert-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-
-.alert-field { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 140px; }
-.alert-field label { font-size: 0.6rem; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
-.alert-field input {
-  background: var(--bg); border: 1px solid var(--border); border-radius: 3px;
-  padding: 8px 12px; color: var(--text);
-  font-family: 'Share Tech Mono', monospace; font-size: 0.85rem;
-  outline: none; transition: border-color 0.2s; width: 100%;
-}
-.alert-field input:focus { border-color: var(--accent); }
-
-.alert-status {
-  font-family: 'Share Tech Mono', monospace; font-size: 0.75rem;
-  padding: 8px 14px; border-radius: 3px;
-  border: 1px solid var(--border); color: var(--green); white-space: nowrap;
-}
-.alert-status.triggered { border-color: rgba(255,43,74,0.35); color: var(--red); background: rgba(255,43,74,0.08); }
-
-/* ── TABLE ── */
-.table-panel {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 6px; padding: 22px; overflow-x: auto;
-}
-
-table { width: 100%; border-collapse: collapse; font-family: 'Share Tech Mono', monospace; font-size: 0.8rem; }
-th { text-align: left; padding: 8px 14px; font-size: 0.6rem; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--border); }
-td { padding: 10px 14px; border-bottom: 1px solid rgba(24,32,48,0.6); color: var(--text); }
-tr:hover td { background: rgba(255,255,255,0.02); }
-tr:last-child td { border-bottom: none; }
-.rpm-cell { color: var(--accent); font-weight: 600; }
-.rpm-cell.high { color: var(--red); }
-
-/* ── ERROR STATE ── */
-#error-msg {
-  display: none;
-  background: rgba(255,43,74,0.06);
-  border: 1px solid rgba(255,43,74,0.2);
-  border-radius: 4px;
-  padding: 16px 20px;
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 0.78rem; color: var(--red);
-  margin-bottom: 20px;
-}
-
-footer {
-  text-align: center; padding: 20px 0 10px;
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 0.65rem; color: var(--muted); letter-spacing: 1px;
-  border-top: 1px solid var(--border);
-}
-
-@media (max-width: 640px) {
-  .stats-grid { grid-template-columns: 1fr 1fr; }
-  .stats-grid .stat-card:last-child { grid-column: span 2; }
-  .rpm-hero { justify-content: center; text-align: center; }
-  .gauge-wrap { display: none; }
-}
+@media(max-width:900px){.hero{grid-template-columns:1fr;text-align:center;}.gauge-section{display:none;}.hero-meta{grid-template-columns:repeat(2,1fr);}.alert-config-grid{grid-template-columns:1fr 1fr;}}
+@media(max-width:600px){.page{padding:0 16px 40px;}.stats-row{grid-template-columns:1fr;}.alert-config-grid{grid-template-columns:1fr;}.rpm-number{font-size:4.5rem;}}
 </style>
 </head>
 <body>
-<div id="app">
+<div class="page">
 
-  <header>
-    <div>
-      <div class="brand-name">⬡ RPM Monitor</div>
-      <div class="brand-sub" id="machine-label">Cargando...</div>
-    </div>
-    <div class="header-right">
-      <div class="live-badge"><div class="live-dot"></div>EN VIVO</div>
-      <div class="last-update" id="last-update">—</div>
-    </div>
-  </header>
-
-  <div id="error-msg"></div>
-  <div id="alert-banner">⚠ ALERTA: <span id="alert-msg"></span></div>
-
-  <!-- RPM Hero -->
-  <div class="rpm-hero">
-    <div>
-      <div class="rpm-label">Velocidad actual</div>
-      <div class="rpm-value" id="rpm-display">—</div>
-      <div class="rpm-unit">RPM</div>
-    </div>
-
-    <div class="gauge-wrap">
-      <canvas id="gauge" width="180" height="100"></canvas>
-      <div class="gauge-label">0 ——— 3000 RPM</div>
-    </div>
-
-    <div class="machine-info">
-      <div class="info-row">
-        <span class="info-key">Máquina</span>
-        <span class="info-val" id="info-machine">—</span>
-      </div>
-      <div class="info-row">
-        <span class="info-key">Estado</span>
-        <span class="info-val" id="info-status" style="color:var(--green)">Conectando...</span>
-      </div>
-      <div class="info-row">
-        <span class="info-key">Lecturas en rango</span>
-        <span class="info-val" id="info-count">—</span>
-      </div>
-      <div class="info-row">
-        <span class="info-key">Última lectura</span>
-        <span class="info-val" id="info-ts">—</span>
-      </div>
+<header class="header">
+  <div class="header-left">
+    <h1 class="header-title">Monitor de Producción</h1>
+    <div class="header-subtitle">
+      <span id="hdr-machine">—</span>
+      <span class="separator">·</span>
+      <span>Velocidad en tiempo real</span>
+      <span class="separator">·</span>
+      <span class="update-time" id="hdr-time">—</span>
     </div>
   </div>
+  <div class="header-right">
+    <div class="status-pill" id="status-pill"><div class="pulse-dot"></div><span id="status-text">Conectando</span></div>
+    <button class="theme-btn" id="theme-btn" onclick="toggleTheme()" title="Cambiar tema">🌙</button>
+  </div>
+</header>
 
-  <!-- Stats -->
-  <div class="stats-grid">
-    <div class="stat-card min">
-      <div class="stat-label">Mínimo</div>
-      <div class="stat-value" id="stat-min">—</div>
-      <div class="stat-unit">RPM</div>
-    </div>
-    <div class="stat-card max">
-      <div class="stat-label">Máximo</div>
-      <div class="stat-value" id="stat-max">—</div>
-      <div class="stat-unit">RPM</div>
-    </div>
-    <div class="stat-card avg">
-      <div class="stat-label">Promedio</div>
-      <div class="stat-value" id="stat-avg">—</div>
-      <div class="stat-unit">RPM</div>
+<div id="error-box"></div>
+<div id="alert-banner"><span>⚠</span><span id="alert-msg">RPM fuera de rango operativo</span></div>
+
+<div class="hero">
+  <div class="hero-main">
+    <div class="hero-label">Velocidad actual</div>
+    <div class="rpm-number" id="rpm-display">—</div>
+    <div class="rpm-unit-row">
+      <span class="rpm-unit">RPM</span>
+      <span class="rpm-trend flat" id="rpm-trend">— sin cambio</span>
     </div>
   </div>
+  <div class="gauge-section">
+    <canvas id="gauge" width="170" height="95"></canvas>
+    <div class="gauge-pct" id="gauge-pct">— % del rango</div>
+  </div>
+  <div class="hero-meta">
+    <div class="meta-item"><div class="meta-label">Máquina</div><div class="meta-value" id="meta-machine">—</div></div>
+    <div class="meta-item"><div class="meta-label">Estado</div><div class="meta-value" id="meta-status" style="color:var(--green)">—</div></div>
+    <div class="meta-item"><div class="meta-label">Lecturas</div><div class="meta-value" id="meta-count">—</div></div>
+    <div class="meta-item"><div class="meta-label">Última act.</div><div class="meta-value" id="meta-ts">—</div></div>
+  </div>
+</div>
 
-  <!-- Chart -->
-  <div class="chart-panel">
-    <div class="panel-header">
-      <div class="panel-title">Historial de RPM</div>
-      <div class="range-btns">
-        <button class="range-btn active" onclick="setRange(5,this)">5 min</button>
-        <button class="range-btn" onclick="setRange(15,this)">15 min</button>
-        <button class="range-btn" onclick="setRange(60,this)">1 hora</button>
-        <button class="range-btn" onclick="setRange(1440,this)">24 h</button>
-      </div>
-    </div>
-    <div class="chart-container">
-      <canvas id="rpmChart"></canvas>
+<div class="stats-row">
+  <div class="stat-card min"><div class="stat-icon">↓</div><div class="stat-label">Mínimo registrado</div><div class="stat-value" id="stat-min">—</div><div class="stat-unit">RPM en el período</div></div>
+  <div class="stat-card max"><div class="stat-icon">↑</div><div class="stat-label">Máximo registrado</div><div class="stat-value" id="stat-max">—</div><div class="stat-unit">RPM en el período</div></div>
+  <div class="stat-card avg"><div class="stat-icon">≈</div><div class="stat-label">Promedio</div><div class="stat-value" id="stat-avg">—</div><div class="stat-unit">RPM en el período</div></div>
+</div>
+
+<div class="panel">
+  <div class="panel-head">
+    <div><div class="panel-title">Historial de RPM</div><div class="panel-subtitle">Evolución de velocidad en el tiempo seleccionado</div></div>
+    <div class="range-group">
+      <button class="range-btn active" onclick="setRange(5,this)">5 min</button>
+      <button class="range-btn" onclick="setRange(15,this)">15 min</button>
+      <button class="range-btn" onclick="setRange(60,this)">1 hora</button>
+      <button class="range-btn" onclick="setRange(1440,this)">24 h</button>
     </div>
   </div>
+  <div class="chart-wrap"><canvas id="rpmChart"></canvas></div>
+</div>
 
-  <!-- Alerts -->
-  <div class="alert-panel">
-    <div class="panel-header">
-      <div class="panel-title">Configuración de alertas</div>
-      <div class="alert-status" id="alert-badge">✓ Normal</div>
-    </div>
-    <div class="alert-row">
-      <div class="alert-field">
-        <label>RPM Mínimo</label>
-        <input type="number" id="alert-min" value="200"/>
-      </div>
-      <div class="alert-field">
-        <label>RPM Máximo</label>
-        <input type="number" id="alert-max" value="3000"/>
-      </div>
-      <div class="alert-field" style="flex:2">
-        <label>Descripción del rango</label>
-        <input type="text" id="alert-desc" value="Rango operativo normal"/>
-      </div>
-    </div>
+<div class="panel">
+  <div class="panel-head">
+    <div><div class="panel-title">Límites de alerta</div><div class="panel-subtitle">Se activa visualmente si el RPM sale del rango definido</div></div>
+    <div class="alert-badge ok" id="alert-badge">✓ Dentro del rango</div>
   </div>
+  <div class="alert-config-grid">
+    <div class="field"><label>RPM mínimo</label><input type="number" id="alert-min" value="200"/></div>
+    <div class="field"><label>RPM máximo</label><input type="number" id="alert-max" value="3000"/></div>
+    <div class="field"><label>Descripción del rango</label><input type="text" id="alert-desc" value="Rango operativo normal de la máquina"/></div>
+  </div>
+</div>
 
-  <!-- Table -->
-  <div class="table-panel">
-    <div class="panel-header">
-      <div class="panel-title">Últimas 20 lecturas</div>
-    </div>
+<div class="panel">
+  <div class="panel-head">
+    <div><div class="panel-title">Últimas lecturas</div><div class="panel-subtitle">20 registros más recientes</div></div>
+  </div>
+  <div class="table-wrap">
     <table>
-      <thead>
-        <tr><th>#</th><th>Timestamp</th><th>Máquina</th><th>RPM</th><th>Estado</th></tr>
-      </thead>
-      <tbody id="tbody">
-        <tr><td colspan="5" style="color:var(--muted);text-align:center;padding:24px">Cargando datos...</td></tr>
-      </tbody>
+      <thead><tr><th>#</th><th>Fecha y hora</th><th>Máquina</th><th>RPM</th><th>Estado</th></tr></thead>
+      <tbody id="tbody"><tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text-3)">Cargando registros...</td></tr></tbody>
     </table>
   </div>
+</div>
 
-  <footer>RPM MONITOR · Datos en vivo · Actualiza cada 3 seg · Powered by Supabase + Vercel</footer>
+<div class="footer">Monitor de Producción &nbsp;·&nbsp; Datos en tiempo real &nbsp;·&nbsp; Actualización cada 3 segundos</div>
 </div>
 
 <script>
-let chart      = null;
-let rangeMin   = 5;
-let pollTimer  = null;
+const html = document.documentElement;
+const themeBtn = document.getElementById('theme-btn');
 
-// ── GAUGE ──────────────────────────────────────────
+function toggleTheme() {
+  const isDark = html.getAttribute('data-theme') === 'dark';
+  const next = isDark ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  themeBtn.textContent = next === 'dark' ? '🌙' : '☀️';
+  localStorage.setItem('theme', next);
+  if (chart) updateChartTheme();
+}
+
+function loadTheme() {
+  const saved = localStorage.getItem('theme') || 'dark';
+  html.setAttribute('data-theme', saved);
+  themeBtn.textContent = saved === 'dark' ? '🌙' : '☀️';
+}
+
+function cssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+// GAUGE
 function drawGauge(rpm, maxRpm = 3000) {
   const canvas = document.getElementById('gauge');
   const ctx = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height;
   ctx.clearRect(0, 0, W, H);
-  const cx = W / 2, cy = H - 10, r = H - 20;
+  const cx = W/2, cy = H, r = H - 14;
   const pct = Math.min(rpm / maxRpm, 1);
-
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, Math.PI, 2 * Math.PI);
-  ctx.strokeStyle = '#182030'; ctx.lineWidth = 14; ctx.lineCap = 'round'; ctx.stroke();
-
-  const color = pct > 0.85 ? '#ff2b4a' : pct > 0.6 ? '#ff7300' : '#e8ff00';
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, Math.PI, Math.PI + pct * Math.PI);
-  ctx.strokeStyle = color; ctx.lineWidth = 14; ctx.lineCap = 'round';
-  ctx.shadowColor = color; ctx.shadowBlur = 14; ctx.stroke(); ctx.shadowBlur = 0;
+  ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI, 2*Math.PI);
+  ctx.strokeStyle = cssVar('--border'); ctx.lineWidth = 12; ctx.lineCap = 'round'; ctx.stroke();
+  const color = pct > 0.85 ? cssVar('--red') : pct > 0.6 ? cssVar('--orange') : cssVar('--primary');
+  ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI, Math.PI + pct * Math.PI);
+  ctx.strokeStyle = color; ctx.lineWidth = 12; ctx.lineCap = 'round';
+  ctx.shadowColor = color; ctx.shadowBlur = 10; ctx.stroke(); ctx.shadowBlur = 0;
+  document.getElementById('gauge-pct').textContent = `${Math.round(pct*100)}% del rango`;
 }
 
-// ── CHART ──────────────────────────────────────────
+// CHART
+let chart = null;
+
 function initChart() {
   const ctx = document.getElementById('rpmChart').getContext('2d');
+  const primary = cssVar('--primary');
   chart = new Chart(ctx, {
     type: 'line',
-    data: { labels: [], datasets: [{
-      label: 'RPM', data: [],
-      borderColor: '#e8ff00',
-      backgroundColor: 'rgba(232,255,0,0.04)',
-      borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: 0.3, fill: true
-    }]},
+    data: { labels: [], datasets: [{ label: 'RPM', data: [],
+      borderColor: primary, backgroundColor: 'rgba(79,142,247,0.06)',
+      borderWidth: 2.5, pointRadius: 0, pointHoverRadius: 5, tension: 0.4, fill: true }]},
     options: {
-      responsive: true, maintainAspectRatio: false,
-      animation: { duration: 250 },
+      responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
       interaction: { intersect: false, mode: 'index' },
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: '#0e1318', borderColor: '#182030', borderWidth: 1,
-          titleColor: '#3a5068', bodyColor: '#e8ff00',
-          titleFont: { family: 'Share Tech Mono', size: 10 },
-          bodyFont:  { family: 'Share Tech Mono', size: 13 },
-          callbacks: {
-            title: i => i[0].label,
-            label: i => ` ${Math.round(i.raw)} RPM`
-          }
+          backgroundColor: cssVar('--surface-2'), borderColor: cssVar('--border'), borderWidth: 1,
+          titleColor: cssVar('--text-3'), bodyColor: cssVar('--primary'),
+          padding: 12, cornerRadius: 8,
+          titleFont: { family: 'DM Sans', size: 11, weight: '500' },
+          bodyFont: { family: 'DM Mono', size: 14 },
+          callbacks: { title: i => i[0].label, label: i => ` ${Math.round(i.raw)} RPM` }
         }
       },
       scales: {
-        x: { grid: { color: '#182030' }, ticks: { color: '#3a5068', font: { family: 'Share Tech Mono', size: 10 }, maxTicksLimit: 8 }},
-        y: { grid: { color: '#182030' }, ticks: { color: '#3a5068', font: { family: 'Share Tech Mono', size: 10 }}, min: 0 }
+        x: { grid: { color: cssVar('--border') }, ticks: { color: cssVar('--text-3'), font: { family: 'DM Sans', size: 11 }, maxTicksLimit: 8 }},
+        y: { grid: { color: cssVar('--border') }, ticks: { color: cssVar('--text-3'), font: { family: 'DM Sans', size: 11 }}, min: 0 }
       }
     }
   });
 }
 
-// ── FETCH desde /api/data (serverless function) ────
+function updateChartTheme() {
+  if (!chart) return;
+  const p = cssVar('--primary'), b = cssVar('--border'), t = cssVar('--text-3');
+  chart.data.datasets[0].borderColor = p;
+  chart.data.datasets[0].backgroundColor = 'rgba(79,142,247,0.06)';
+  ['x','y'].forEach(ax => { chart.options.scales[ax].grid.color = b; chart.options.scales[ax].ticks.color = t; });
+  chart.options.plugins.tooltip.backgroundColor = cssVar('--surface-2');
+  chart.options.plugins.tooltip.borderColor = b;
+  chart.options.plugins.tooltip.titleColor = t;
+  chart.options.plugins.tooltip.bodyColor = p;
+  chart.update('none');
+}
+
+// API
 async function apiFetch(type, minutes) {
-  const params = new URLSearchParams({ type });
-  if (minutes) params.set('minutes', minutes);
-  const res = await fetch(`/api/data?${params}`);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-    throw new Error(err.error || `HTTP ${res.status}`);
-  }
+  const p = new URLSearchParams({ type });
+  if (minutes) p.set('minutes', minutes);
+  const res = await fetch(`/api/data?${p}`);
+  if (!res.ok) { const e = await res.json().catch(() => ({ error: `HTTP ${res.status}` })); throw new Error(e.error || `HTTP ${res.status}`); }
   return res.json();
 }
 
-// ── POLL ───────────────────────────────────────────
-async function poll() {
-  try {
-    const [latestRes, historyRes, recentRes] = await Promise.all([
-      apiFetch('latest'),
-      apiFetch('history', rangeMin),
-      apiFetch('recent')
-    ]);
+// TREND
+let prevRpm = null;
+function updateTrend(rpm) {
+  const el = document.getElementById('rpm-trend');
+  if (prevRpm === null)        { el.className = 'rpm-trend flat'; el.textContent = '— sin cambio'; }
+  else if (rpm > prevRpm + 5)  { el.className = 'rpm-trend up';   el.textContent = `↑ +${Math.round(rpm - prevRpm)} RPM`; }
+  else if (rpm < prevRpm - 5)  { el.className = 'rpm-trend down'; el.textContent = `↓ ${Math.round(rpm - prevRpm)} RPM`; }
+  else                          { el.className = 'rpm-trend flat'; el.textContent = '— estable'; }
+  prevRpm = rpm;
+}
 
-    document.getElementById('error-msg').style.display = 'none';
-
-    // Machine label (una sola vez)
-    if (latestRes.machine_id) {
-      document.getElementById('machine-label').textContent = latestRes.machine_id.toUpperCase();
-      document.getElementById('info-machine').textContent  = latestRes.machine_id;
-    }
-
-    // Latest RPM
-    const latest = latestRes.data[0];
-    if (latest) {
-      const rpm = latest.rpm;
-      document.getElementById('rpm-display').textContent = Math.round(rpm);
-      document.getElementById('info-status').textContent = 'En línea';
-      document.getElementById('info-status').style.color = 'var(--green)';
-
-      const ts = new Date(latest.created_at);
-      document.getElementById('info-ts').textContent =
-        ts.toLocaleTimeString('es', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
-      document.getElementById('last-update').textContent =
-        'Act. ' + ts.toLocaleTimeString('es');
-
-      drawGauge(rpm);
-      checkAlerts(rpm);
-    }
-
-    // History → chart + stats
-    const history = historyRes.data;
-    document.getElementById('info-count').textContent = history.length;
-    updateChart(history);
-    updateStats(history);
-
-    // Recent → table
-    updateTable(recentRes.data);
-
-  } catch (err) {
-    const el = document.getElementById('error-msg');
-    el.style.display = 'block';
-    el.textContent = '⚠ Error al conectar: ' + err.message;
-    document.getElementById('info-status').textContent = 'Sin conexión';
-    document.getElementById('info-status').style.color = 'var(--red)';
-    console.error(err);
+// ALERTS
+function checkAlerts(rpm) {
+  const minA = parseFloat(document.getElementById('alert-min').value) || 0;
+  const maxA = parseFloat(document.getElementById('alert-max').value) || 99999;
+  const out = rpm < minA || rpm > maxA;
+  const banner = document.getElementById('alert-banner');
+  const badge  = document.getElementById('alert-badge');
+  if (out) {
+    document.getElementById('alert-msg').textContent = rpm < minA
+      ? `RPM actual (${Math.round(rpm)}) está por debajo del mínimo (${minA} RPM)`
+      : `RPM actual (${Math.round(rpm)}) supera el máximo (${maxA} RPM)`;
+    banner.style.display = 'flex';
+    badge.className = 'alert-badge warn'; badge.textContent = '⚠ Fuera de rango';
+    document.getElementById('rpm-display').classList.add('warning');
+  } else {
+    banner.style.display = 'none';
+    badge.className = 'alert-badge ok'; badge.textContent = '✓ Dentro del rango';
+    document.getElementById('rpm-display').classList.remove('warning');
   }
 }
 
-function updateChart(readings) {
+// RENDER
+function renderChart(readings) {
   if (!chart || !readings.length) return;
-  chart.data.labels = readings.map(r => {
-    const d = new Date(r.created_at);
-    return d.toLocaleTimeString('es', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
-  });
+  chart.data.labels = readings.map(r => new Date(r.created_at).toLocaleTimeString('es', { hour:'2-digit', minute:'2-digit', second:'2-digit' }));
   chart.data.datasets[0].data = readings.map(r => r.rpm);
   chart.update('none');
 }
 
-function updateStats(readings) {
+function renderStats(readings) {
   if (!readings.length) return;
   const rpms = readings.map(r => r.rpm);
   document.getElementById('stat-min').textContent = Math.round(Math.min(...rpms));
   document.getElementById('stat-max').textContent = Math.round(Math.max(...rpms));
-  document.getElementById('stat-avg').textContent = Math.round(rpms.reduce((a,b) => a+b, 0) / rpms.length);
+  document.getElementById('stat-avg').textContent = Math.round(rpms.reduce((a,b)=>a+b,0)/rpms.length);
+  document.getElementById('meta-count').textContent = readings.length.toLocaleString('es');
 }
 
-function updateTable(readings) {
+function renderTable(readings) {
   const tbody = document.getElementById('tbody');
-  const minA  = parseFloat(document.getElementById('alert-min').value) || 0;
-  const maxA  = parseFloat(document.getElementById('alert-max').value) || 99999;
-  if (!readings.length) {
-    tbody.innerHTML = '<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:24px">Sin datos</td></tr>';
-    return;
-  }
+  const minA = parseFloat(document.getElementById('alert-min').value) || 0;
+  const maxA = parseFloat(document.getElementById('alert-max').value) || 99999;
+  if (!readings.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text-3)">Sin datos disponibles</td></tr>'; return; }
   tbody.innerHTML = readings.map((r, i) => {
     const out = r.rpm < minA || r.rpm > maxA;
+    const ts  = new Date(r.created_at);
     return `<tr>
-      <td style="color:var(--muted)">${i+1}</td>
-      <td>${new Date(r.created_at).toLocaleString('es')}</td>
+      <td style="color:var(--text-3);font-family:'DM Mono',monospace;font-size:0.78rem">${String(i+1).padStart(2,'0')}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:0.82rem">${ts.toLocaleDateString('es',{day:'2-digit',month:'short'})} · ${ts.toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</td>
       <td>${r.machine_id}</td>
-      <td class="rpm-cell${out?' high':''}">${Math.round(r.rpm)}</td>
-      <td>${out ? '<span style="color:var(--red)">⚠ Alerta</span>' : '<span style="color:var(--green)">✓ Normal</span>'}</td>
+      <td class="td-rpm${out?' warn':''}">${Math.round(r.rpm)}</td>
+      <td><span class="badge ${out?'warn':'ok'}">${out?'⚠ Alerta':'✓ Normal'}</span></td>
     </tr>`;
   }).join('');
 }
 
-function checkAlerts(rpm) {
-  const minA   = parseFloat(document.getElementById('alert-min').value) || 0;
-  const maxA   = parseFloat(document.getElementById('alert-max').value) || 99999;
-  const banner = document.getElementById('alert-banner');
-  const badge  = document.getElementById('alert-badge');
-  const rpmEl  = document.getElementById('rpm-display');
+// POLL
+let rangeMin = 5;
 
-  if (rpm < minA || rpm > maxA) {
-    const msg = rpm < minA
-      ? `${Math.round(rpm)} RPM está por debajo del mínimo (${minA})`
-      : `${Math.round(rpm)} RPM supera el máximo (${maxA})`;
-    document.getElementById('alert-msg').textContent = msg;
-    banner.style.display = 'block';
-    badge.textContent = '⚠ ALERTA'; badge.classList.add('triggered');
-    rpmEl.classList.add('warning');
-  } else {
-    banner.style.display = 'none';
-    badge.textContent = '✓ Normal'; badge.classList.remove('triggered');
-    rpmEl.classList.remove('warning');
+async function poll() {
+  try {
+    const [latestRes, historyRes, recentRes] = await Promise.all([apiFetch('latest'), apiFetch('history', rangeMin), apiFetch('recent')]);
+    document.getElementById('error-box').style.display = 'none';
+    const mid = latestRes.machine_id || '—';
+    document.getElementById('hdr-machine').textContent  = mid;
+    document.getElementById('meta-machine').textContent = mid;
+    const latest = latestRes.data[0];
+    if (latest) {
+      const rpm = latest.rpm;
+      document.getElementById('rpm-display').textContent = Math.round(rpm);
+      const ts = new Date(latest.created_at);
+      const t  = ts.toLocaleTimeString('es', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+      document.getElementById('meta-ts').textContent  = t;
+      document.getElementById('hdr-time').textContent = `Act. ${t}`;
+      document.getElementById('status-pill').className = 'status-pill';
+      document.getElementById('status-text').textContent = 'En línea';
+      document.getElementById('meta-status').textContent = 'Operativo';
+      document.getElementById('meta-status').style.color = 'var(--green)';
+      drawGauge(rpm); updateTrend(rpm); checkAlerts(rpm);
+    }
+    renderChart(historyRes.data); renderStats(historyRes.data); renderTable(recentRes.data);
+  } catch(err) {
+    const box = document.getElementById('error-box');
+    box.style.display = 'block'; box.textContent = '⚠ Error al obtener datos: ' + err.message;
+    document.getElementById('status-pill').className = 'status-pill offline';
+    document.getElementById('status-text').textContent = 'Sin conexión';
+    document.getElementById('meta-status').textContent = 'Sin conexión';
+    document.getElementById('meta-status').style.color = 'var(--red)';
   }
 }
 
 function setRange(min, btn) {
   rangeMin = min;
   document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  poll();
+  btn.classList.add('active'); poll();
 }
 
-// ── INIT ───────────────────────────────────────────
-initChart();
-poll();
-pollTimer = setInterval(poll, 3000);
+loadTheme(); initChart(); poll(); setInterval(poll, 3000);
 </script>
 </body>
 </html>
